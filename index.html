@@ -257,6 +257,7 @@
         <option value="Georgia, serif">Serif</option>
         <option value="-apple-system, sans-serif">Sans</option>
       </select>
+      <button id="saveBtn">💾 Save</button>
       <button id="teleprompterBtn" disabled>▶ Teleprompter</button>
     </div>
     <input id="titleInput" type="text" placeholder="Script title…">
@@ -272,7 +273,7 @@
 <div id="teleprompterView">
   <div id="prompterControls">
     <label>Speed:</label>
-    <input type="range" id="speedSlider" min="1" max="100" value="25">
+    <input type="range" id="speedSlider" min="1" max="100" value="10">
     <span id="speedLabel">25</span>
     <button id="pauseBtn">Pause</button>
     <button id="exitBtn">✕ Exit</button>
@@ -293,11 +294,20 @@
 
   // ── Storage ──
   function load() {
-    try { scripts = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-    catch { scripts = []; }
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      scripts = data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.warn('Failed to load from localStorage:', e);
+      scripts = [];
+    }
   }
   function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(scripts));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(scripts));
+    } catch (e) {
+      console.warn('Failed to save to localStorage:', e);
+    }
   }
   function nextId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -357,10 +367,12 @@
     if (scripts.length === 0) {
       emptyState.classList.add('visible');
       mainEditor.style.display = 'none';
+      sidebar.style.display = 'none';
       return;
     }
     emptyState.classList.remove('visible');
-    mainEditor.style.display = '';
+    mainEditor.style.display = 'flex';
+    sidebar.style.display = 'flex';
     scripts.forEach(s => {
       const li = document.createElement('li');
       if (s.id === activeId) li.classList.add('active');
@@ -382,7 +394,10 @@
 
   // ── Select / edit ──
   function selectScript(id) {
-    saveCurrent();
+    // Save the PREVIOUS script before switching (if we have one)
+    if (activeId) {
+      saveCurrent();
+    }
     activeId = id;
     const s = scripts.find(x => x.id === id);
     if (!s) return;
@@ -466,19 +481,26 @@
       cancelAnimationFrame(prompterScrollId);
       prompterScrollId = null;
     }
+    subPixelOffset = 0;
   }
 
   function getSpeedPxPerFrame() {
-    // map 1–100 to 0.3–12 px/frame (~18–720 px/s at 60fps)
+    // map 1–100 to 0.075–3 px/frame (~4.5–180 px/s at 60fps)
     const v = parseFloat(speedSlider.value);
-    return 0.3 + (v / 100) * 11.7;
+    return 0.075 + (v / 100) * 2.925;
   }
 
+  let subPixelOffset = 0;
   function startScroll() {
     if (prompterScrollId) cancelAnimationFrame(prompterScrollId);
     function tick() {
       if (!paused) {
-        prompterContent.scrollTop += getSpeedPxPerFrame();
+        subPixelOffset += getSpeedPxPerFrame();
+        const intScroll = Math.floor(subPixelOffset);
+        if (intScroll > 0) {
+          prompterContent.scrollTop += intScroll;
+          subPixelOffset -= intScroll;
+        }
       }
       prompterScrollId = requestAnimationFrame(tick);
     }
@@ -501,6 +523,12 @@
   });
 
   // ── Event listeners ──
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.addEventListener('click', () => {
+    saveCurrent();
+    saveBtn.textContent = '✓ Saved!';
+    setTimeout(() => { saveBtn.textContent = '💾 Save'; }, 1500);
+  });
   newScriptBtn.addEventListener('click', createScript);
   teleprompterBtn.addEventListener('click', openTeleprompter);
   exitBtn.addEventListener('click', closeTeleprompter);
@@ -512,18 +540,27 @@
     speed = parseInt(speedSlider.value);
     speedLabel.textContent = speed;
   });
+  // initial label
+  speedLabel.textContent = speedSlider.value;
   fontSelect.addEventListener('change', () => {
     if (teleprompterView.classList.contains('active')) {
       prompterContent.style.fontFamily = fontSelect.value;
     }
   });
 
+  // ── Save on page unload (reload, close, navigate away) ──
+  window.addEventListener('beforeunload', () => {
+    saveCurrent();
+    save();
+  });
+
   // ── Init ──
+  // Make sure editor view is visible
+  editorView.style.display = 'flex';
   load();
   renderList();
   if (scripts.length > 0) {
-    activeId = scripts[0].id;
-    selectScript(activeId);
+    selectScript(scripts[0].id);
   }
 })();
 </script>
