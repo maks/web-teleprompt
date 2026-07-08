@@ -173,8 +173,7 @@
     align-items: center;
     gap: 14px;
     padding: 10px 20px;
-    background: rgba(0,0,0,.75);
-    backdrop-filter: blur(8px);
+    background: rgba(0,0,0,.85);
     z-index: 10;
     opacity: 0;
     transition: opacity .3s;
@@ -196,11 +195,11 @@
   #exitBtn { background: var(--surface2); color: #ccc; }
   #prompterContent {
     flex: 1;
-    overflow-y: auto;
+    overflow: hidden;
     padding: 120px 80px 60vh;
-    scroll-behavior: auto;
   }
   #prompterText {
+    will-change: transform;
     font-size: 52px;
     line-height: 1.6;
     color: #fff;
@@ -465,7 +464,8 @@
     const s = scripts.find(x => x.id === activeId);
     if (!s) return;
     prompterText.innerHTML = md(s.content);
-    prompterContent.scrollTop = 0;
+    scrollOffset = 0;
+    applyOffset();
     paused = false;
     pauseBtn.textContent = 'Pause';
     teleprompterView.classList.add('active');
@@ -480,31 +480,43 @@
       cancelAnimationFrame(prompterScrollId);
       prompterScrollId = null;
     }
-    subPixelOffset = 0;
+    scrollOffset = 0;
+    applyOffset();
   }
 
-  function getSpeedPxPerFrame() {
-    // map 1–100 to 0.075–3 px/frame (~4.5–180 px/s at 60fps)
+  function getSpeedPxPerSecond() {
+    // map 1–100 to ~4.5–180 px/s
     const v = parseFloat(speedSlider.value);
-    return 0.075 + (v / 100) * 2.925;
+    return 4.5 + (v / 100) * 175.5;
   }
 
-  let subPixelOffset = 0;
+  let scrollOffset = 0;
+  function maxOffset() {
+    return Math.max(0, prompterContent.scrollHeight - prompterContent.clientHeight);
+  }
+  function applyOffset() {
+    prompterText.style.transform = `translate3d(0, ${-scrollOffset}px, 0)`;
+  }
   function startScroll() {
     if (prompterScrollId) cancelAnimationFrame(prompterScrollId);
-    function tick() {
-      if (!paused) {
-        subPixelOffset += getSpeedPxPerFrame();
-        const intScroll = Math.floor(subPixelOffset);
-        if (intScroll > 0) {
-          prompterContent.scrollTop += intScroll;
-          subPixelOffset -= intScroll;
-        }
+    let lastTime = null;
+    function tick(now) {
+      if (!paused && lastTime !== null) {
+        const dt = Math.min((now - lastTime) / 1000, 0.1);
+        scrollOffset = Math.min(scrollOffset + getSpeedPxPerSecond() * dt, maxOffset());
+        applyOffset();
       }
+      lastTime = now;
       prompterScrollId = requestAnimationFrame(tick);
     }
     prompterScrollId = requestAnimationFrame(tick);
   }
+
+  prompterContent.addEventListener('wheel', e => {
+    e.preventDefault();
+    scrollOffset = Math.min(Math.max(0, scrollOffset + e.deltaY), maxOffset());
+    applyOffset();
+  }, { passive: false });
 
   // ── Spacebar toggle ──
   document.addEventListener('keydown', e => {
