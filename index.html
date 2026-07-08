@@ -251,13 +251,6 @@
   </div>
   <div id="mainEditor">
     <div id="toolbar">
-      <label for="fontSelect">Font:</label>
-      <select id="fontSelect">
-        <option value="'SF Mono', monospace">Mono</option>
-        <option value="Georgia, serif">Serif</option>
-        <option value="-apple-system, sans-serif">Sans</option>
-      </select>
-      <button id="saveBtn">💾 Save</button>
       <button id="teleprompterBtn" disabled>▶ Teleprompter</button>
     </div>
     <input id="titleInput" type="text" placeholder="Script title…">
@@ -349,7 +342,6 @@
   const newScriptBtn = document.getElementById('newScriptBtn');
   const titleInput = document.getElementById('titleInput');
   const editor = document.getElementById('editor');
-  const fontSelect = document.getElementById('fontSelect');
   const teleprompterBtn = document.getElementById('teleprompterBtn');
   const emptyState = document.getElementById('emptyState');
   const teleprompterView = document.getElementById('teleprompterView');
@@ -468,7 +460,6 @@
     prompterContent.scrollTop = 0;
     paused = false;
     pauseBtn.textContent = 'Pause';
-    prompterContent.style.fontFamily = fontSelect.value;
     teleprompterView.classList.add('active');
     document.body.style.overflow = 'hidden';
     startScroll();
@@ -523,12 +514,6 @@
   });
 
   // ── Event listeners ──
-  const saveBtn = document.getElementById('saveBtn');
-  saveBtn.addEventListener('click', () => {
-    saveCurrent();
-    saveBtn.textContent = '✓ Saved!';
-    setTimeout(() => { saveBtn.textContent = '💾 Save'; }, 1500);
-  });
   newScriptBtn.addEventListener('click', createScript);
   teleprompterBtn.addEventListener('click', openTeleprompter);
   exitBtn.addEventListener('click', closeTeleprompter);
@@ -542,11 +527,6 @@
   });
   // initial label
   speedLabel.textContent = speedSlider.value;
-  fontSelect.addEventListener('change', () => {
-    if (teleprompterView.classList.contains('active')) {
-      prompterContent.style.fontFamily = fontSelect.value;
-    }
-  });
 
   // ── Save on page unload (reload, close, navigate away) ──
   window.addEventListener('beforeunload', () => {
