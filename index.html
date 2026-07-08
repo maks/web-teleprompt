@@ -353,17 +353,25 @@
   const pauseBtn = document.getElementById('pauseBtn');
   const exitBtn = document.getElementById('exitBtn');
 
+  // Safety check for DOM elements
+  if (!editorView || !mainEditor || !sidebar || !scriptList) {
+    console.error('Missing required DOM elements');
+    return;
+  }
+
   // ── Render script list ──
   function renderList() {
     scriptList.innerHTML = '';
     if (scripts.length === 0) {
       emptyState.classList.add('visible');
-      mainEditor.style.display = 'none';
+      titleInput.style.display = 'none';
+      editor.style.display = 'none';
       sidebar.style.display = 'none';
       return;
     }
     emptyState.classList.remove('visible');
-    mainEditor.style.display = 'flex';
+    titleInput.style.display = '';
+    editor.style.display = '';
     sidebar.style.display = 'flex';
     scripts.forEach(s => {
       const li = document.createElement('li');
@@ -535,12 +543,20 @@
   });
 
   // ── Init ──
-  // Make sure editor view is visible
-  editorView.style.display = 'flex';
-  load();
-  renderList();
-  if (scripts.length > 0) {
-    selectScript(scripts[0].id);
+  try {
+    // Make sure editor view is visible
+    editorView.style.display = 'flex';
+    load();
+    
+    // Auto-create initial script if none exist
+    if (scripts.length === 0) {
+      createScript();
+    } else {
+      renderList();
+      selectScript(scripts[0].id);
+    }
+  } catch (e) {
+    console.error('Initialization error:', e);
   }
 })();
 </script>
