@@ -107,7 +107,7 @@
   }
 
   #scriptList li .deleteBtn {
-    display: none;
+    visibility: hidden;
     background: none;
     border: none;
     color: var(--accent);
@@ -119,7 +119,7 @@
   }
 
   #scriptList li:hover .deleteBtn {
-    display: inline;
+    visibility: visible;
   }
 
   #scriptList li .deleteBtn:hover {
@@ -381,15 +381,13 @@
       flex-shrink: 0;
       margin-bottom: 0;
       padding: 8px 10px;
+      gap: 8px;
+      max-width: 45vw;
     }
 
     #scriptList li.active {
       border-left: none;
       box-shadow: inset 0 -3px 0 var(--accent);
-    }
-
-    #scriptList li .scriptName {
-      max-width: 40vw;
     }
 
     #titleInput {
@@ -419,7 +417,7 @@
 
   @media (hover: none) {
     #scriptList li .deleteBtn {
-      display: inline;
+      visibility: visible;
     }
 
     #prompterControls {
