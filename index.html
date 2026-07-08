@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web Teleprompter</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #533483;
+    --text: #eee;
+    --text2: #aaa;
+    --radius: 8px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Editor View ── */
+  #editorView { display: flex; height: 100vh; }
+  #sidebar {
+    width: 260px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--surface2);
+    flex-shrink: 0;
+  }
+  #sidebar h2 {
+    padding: 18px 16px 10px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text2);
+  }
+  #newScriptBtn {
+    margin: 0 12px 12px;
+    padding: 10px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: opacity .2s;
+  }
+  #newScriptBtn:hover { opacity: .85; }
+  #scriptList {
+    list-style: none;
+    overflow-y: auto;
+    flex: 1;
+    padding: 0 8px 12px;
+  }
+  #scriptList li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background .15s;
+    position: relative;
+  }
+  #scriptList li:hover { background: var(--surface2); }
+  #scriptList li.active { background: var(--surface2); border-left: 3px solid var(--accent); }
+  #scriptList li .scriptName {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+  #scriptList li .deleteBtn {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  #scriptList li:hover .deleteBtn { display: inline; }
+  #scriptList li .deleteBtn:hover { background: rgba(233,69,96,.2); }
+
+  #mainEditor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  #toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--surface2);
+  }
+  #toolbar label { font-size: 13px; color: var(--text2); }
+  #toolbar select {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--accent2);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #teleprompterBtn {
+    margin-left: auto;
+    padding: 8px 22px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: opacity .2s;
+  }
+  #teleprompterBtn:hover { opacity: .85; }
+  #titleInput {
+    padding: 14px 20px 0;
+    font-size: 22px;
+    font-weight: 700;
+    background: none;
+    border: none;
+    color: var(--text);
+    outline: none;
+    width: 100%;
+  }
+  #titleInput::placeholder { color: var(--text2); }
+  #editor {
+    flex: 1;
+    padding: 16px 20px;
+    font-size: 15px;
+    line-height: 1.7;
+    background: none;
+    border: none;
+    color: var(--text);
+    outline: none;
+    resize: none;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  #editor::placeholder { color: var(--text2); }
+
+  /* ── Teleprompter View ── */
+  #teleprompterView {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 1000;
+    overflow: hidden;
+  }
+  #teleprompterView.active { display: flex; flex-direction: column; }
+  #prompterControls {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 20px;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  #teleprompterView:hover #prompterControls,
+  #prompterControls:focus-within { opacity: 1; }
+  #prompterControls label { font-size: 13px; color: #ccc; white-space: nowrap; }
+  #prompterControls input[type=range] { width: 160px; cursor: pointer; }
+  #speedLabel { font-size: 13px; color: var(--accent); min-width: 42px; }
+  #prompterControls button {
+    padding: 6px 16px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  #pauseBtn { background: var(--accent); color: #fff; }
+  #exitBtn { background: var(--surface2); color: #ccc; }
+  #prompterContent {
+    flex: 1;
+    overflow-y: auto;
+    padding: 120px 80px 60vh;
+    scroll-behavior: auto;
+  }
+  #prompterText {
+    font-size: 52px;
+    line-height: 1.6;
+    color: #fff;
+    max-width: 900px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  #prompterText h1 { font-size: 2em; margin: .6em 0 .3em; color: #fff; }
+  #prompterText h2 { font-size: 1.5em; margin: .5em 0 .25em; color: #ddd; }
+  #prompterText ul { margin: .4em 0; padding-left: 2em; }
+  #prompterText li { margin-bottom: .3em; }
+  #prompterText b, #prompterText strong { color: #ffd; }
+  #prompterText i, #prompterText em { font-style: italic; color: #cde; }
+
+  /* empty state */
+  #emptyState {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: var(--text2);
+    font-size: 18px;
+  }
+  #emptyState.visible { display: flex; }
+  #editorView.hidden { display: none; }
+
+  @media (max-width: 700px) {
+    #sidebar { width: 56px; }
+    #sidebar h2, #newScriptBtn span, #scriptList li .scriptName,
+    #prompterControls label { display: none; }
+    #newScriptBtn { margin: 0 4px 8px; }
+    #prompterContent { padding: 100px 24px 50vh; }
+    #prompterText { font-size: 32px; }
+    #prompterControls { gap: 8px; padding: 8px 10px; }
+    #prompterControls input[type=range] { width: 100px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Editor View ── -->
+<div id="editorView">
+  <div id="sidebar">
+    <h2>Scripts</h2>
+    <button id="newScriptBtn"><span>New Script</span></button>
+    <ul id="scriptList"></ul>
+  </div>
+  <div id="mainEditor">
+    <div id="toolbar">
+      <label for="fontSelect">Font:</label>
+      <select id="fontSelect">
+        <option value="'SF Mono', monospace">Mono</option>
+        <option value="Georgia, serif">Serif</option>
+        <option value="-apple-system, sans-serif">Sans</option>
+      </select>
+      <button id="teleprompterBtn" disabled>▶ Teleprompter</button>
+    </div>
+    <input id="titleInput" type="text" placeholder="Script title…">
+    <textarea id="editor" placeholder="Write your script here…&#10;&#10;# Heading 1&#10;## Heading 2&#10;**bold text**&#10;*italic text*&#10;- bullet point"></textarea>
+    <div id="emptyState">
+      <p>No scripts yet</p>
+      <p style="margin-top:8px;font-size:14px">Click "New Script" to get started</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Teleprompter View ── -->
+<div id="teleprompterView">
+  <div id="prompterControls">
+    <label>Speed:</label>
+    <input type="range" id="speedSlider" min="1" max="100" value="25">
+    <span id="speedLabel">25</span>
+    <button id="pauseBtn">Pause</button>
+    <button id="exitBtn">✕ Exit</button>
+  </div>
+  <div id="prompterContent">
+    <div id="prompterText"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const STORAGE_KEY = 'teleprompter_scripts';
+  let scripts = [];
+  let activeId = null;
+  let prompterScrollId = null;
+  let paused = false;
+  let speed = 25;
+
+  // ── Storage ──
+  function load() {
+    try { scripts = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { scripts = []; }
+  }
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(scripts));
+  }
+  function nextId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  // ── Markdown Parser ──
+  function md(text) {
+    let html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    // headings
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    // bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    // italic
+    html = html.replace(/\*(.+?)\*/g, '<i>$1</i>');
+    // bullet lists
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    // wrap consecutive <li> in <ul>
+    html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+    // paragraphs: split by blank lines, wrap remaining
+    const blocks = html.split(/\n\n+/);
+    html = blocks.map(b => {
+      b = b.trim();
+      if (!b) return '';
+      if (/^<(h[12]|ul|ol|li)/.test(b)) return b;
+      return '<p>' + b + '</p>';
+    }).join('\n');
+    return html;
+  }
+
+  // ── DOM refs ──
+  const editorView = document.getElementById('editorView');
+  const mainEditor = document.getElementById('mainEditor');
+  const sidebar = document.getElementById('sidebar');
+  const scriptList = document.getElementById('scriptList');
+  const newScriptBtn = document.getElementById('newScriptBtn');
+  const titleInput = document.getElementById('titleInput');
+  const editor = document.getElementById('editor');
+  const fontSelect = document.getElementById('fontSelect');
+  const teleprompterBtn = document.getElementById('teleprompterBtn');
+  const emptyState = document.getElementById('emptyState');
+  const teleprompterView = document.getElementById('teleprompterView');
+  const prompterControls = document.getElementById('prompterControls');
+  const prompterContent = document.getElementById('prompterContent');
+  const prompterText = document.getElementById('prompterText');
+  const speedSlider = document.getElementById('speedSlider');
+  const speedLabel = document.getElementById('speedLabel');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const exitBtn = document.getElementById('exitBtn');
+
+  // ── Render script list ──
+  function renderList() {
+    scriptList.innerHTML = '';
+    if (scripts.length === 0) {
+      emptyState.classList.add('visible');
+      mainEditor.style.display = 'none';
+      return;
+    }
+    emptyState.classList.remove('visible');
+    mainEditor.style.display = '';
+    scripts.forEach(s => {
+      const li = document.createElement('li');
+      if (s.id === activeId) li.classList.add('active');
+      const name = document.createElement('span');
+      name.className = 'scriptName';
+      name.textContent = s.title || 'Untitled';
+      name.addEventListener('click', () => selectScript(s.id));
+      const del = document.createElement('button');
+      del.className = 'deleteBtn';
+      del.textContent = '✕';
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteScript(s.id);
+      });
+      li.append(name, del);
+      scriptList.appendChild(li);
+    });
+  }
+
+  // ── Select / edit ──
+  function selectScript(id) {
+    saveCurrent();
+    activeId = id;
+    const s = scripts.find(x => x.id === id);
+    if (!s) return;
+    titleInput.value = s.title;
+    editor.value = s.content;
+    renderList();
+    teleprompterBtn.disabled = false;
+  }
+
+  function saveCurrent() {
+    if (!activeId) return;
+    const s = scripts.find(x => x.id === activeId);
+    if (!s) return;
+    s.title = titleInput.value.trim() || 'Untitled';
+    s.content = editor.value;
+    s.updatedAt = Date.now();
+    save();
+    renderList();
+  }
+
+  function createScript() {
+    const s = {
+      id: nextId(),
+      title: 'Untitled',
+      content: '',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    scripts.push(s);
+    save();
+    selectScript(s.id);
+  }
+
+  function deleteScript(id) {
+    const s = scripts.find(x => x.id === id);
+    if (!s) return;
+    const title = s.title || 'Untitled';
+    if (!confirm(`Delete "${title}"?\n\nThis cannot be undone.`)) return;
+    scripts = scripts.filter(x => x.id !== id);
+    save();
+    if (activeId === id) {
+      activeId = scripts.length ? scripts[0].id : null;
+      if (activeId) selectScript(activeId);
+      else {
+        titleInput.value = '';
+        editor.value = '';
+        teleprompterBtn.disabled = true;
+      }
+    }
+    renderList();
+  }
+
+  // ── Autosave ──
+  let autosaveTimer = null;
+  function onEditorChange() {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(saveCurrent, 400);
+  }
+  titleInput.addEventListener('input', onEditorChange);
+  editor.addEventListener('input', onEditorChange);
+
+  // ── Teleprompter ──
+  function openTeleprompter() {
+    saveCurrent();
+    const s = scripts.find(x => x.id === activeId);
+    if (!s) return;
+    prompterText.innerHTML = md(s.content);
+    prompterContent.scrollTop = 0;
+    paused = false;
+    pauseBtn.textContent = 'Pause';
+    prompterContent.style.fontFamily = fontSelect.value;
+    teleprompterView.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    startScroll();
+  }
+
+  function closeTeleprompter() {
+    teleprompterView.classList.remove('active');
+    document.body.style.overflow = '';
+    if (prompterScrollId) {
+      cancelAnimationFrame(prompterScrollId);
+      prompterScrollId = null;
+    }
+  }
+
+  function getSpeedPxPerFrame() {
+    // map 1–100 to 0.3–12 px/frame (~18–720 px/s at 60fps)
+    const v = parseFloat(speedSlider.value);
+    return 0.3 + (v / 100) * 11.7;
+  }
+
+  function startScroll() {
+    if (prompterScrollId) cancelAnimationFrame(prompterScrollId);
+    function tick() {
+      if (!paused) {
+        prompterContent.scrollTop += getSpeedPxPerFrame();
+      }
+      prompterScrollId = requestAnimationFrame(tick);
+    }
+    prompterScrollId = requestAnimationFrame(tick);
+  }
+
+  // ── Spacebar toggle ──
+  document.addEventListener('keydown', e => {
+    if (!teleprompterView.classList.contains('active')) return;
+    // ignore if focused on an input
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if (e.code === 'Space') {
+      e.preventDefault();
+      paused = !paused;
+      pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+    }
+    if (e.code === 'Escape') {
+      closeTeleprompter();
+    }
+  });
+
+  // ── Event listeners ──
+  newScriptBtn.addEventListener('click', createScript);
+  teleprompterBtn.addEventListener('click', openTeleprompter);
+  exitBtn.addEventListener('click', closeTeleprompter);
+  pauseBtn.addEventListener('click', () => {
+    paused = !paused;
+    pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+  });
+  speedSlider.addEventListener('input', () => {
+    speed = parseInt(speedSlider.value);
+    speedLabel.textContent = speed;
+  });
+  fontSelect.addEventListener('change', () => {
+    if (teleprompterView.classList.contains('active')) {
+      prompterContent.style.fontFamily = fontSelect.value;
+    }
+  });
+
+  // ── Init ──
+  load();
+  renderList();
+  if (scripts.length > 0) {
+    activeId = scripts[0].id;
+    selectScript(activeId);
+  }
+})();
+</script>
+</body>
+</html>
