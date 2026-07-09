@@ -591,6 +591,8 @@
     titleInput.value = s.title;
     editor.value = s.content;
     renderList();
+    const activeLi = scriptList.querySelector('li.active');
+    if (activeLi) activeLi.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     teleprompterBtn.disabled = false;
   }
 
