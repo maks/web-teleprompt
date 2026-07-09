@@ -625,12 +625,17 @@
     if (!s) return;
     const title = s.title || 'Untitled';
     if (!confirm(`Delete "${title}"?\n\nThis cannot be undone.`)) return;
+    const idx = scripts.findIndex(x => x.id === id);
     scripts = scripts.filter(x => x.id !== id);
     save();
     if (activeId === id) {
-      activeId = scripts.length ? scripts[0].id : null;
-      if (activeId) selectScript(activeId);
-      else {
+      if (scripts.length) {
+        // Keep activeId pointing at the deleted script so selectScript's
+        // saveCurrent() no-ops instead of writing the stale editor
+        // contents into the newly selected script.
+        selectScript(scripts[Math.max(0, idx - 1)].id);
+      } else {
+        activeId = null;
         titleInput.value = '';
         editor.value = '';
         teleprompterBtn.disabled = true;
