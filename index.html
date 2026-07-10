@@ -692,7 +692,9 @@
     maxScroll = Math.max(0, prompterContent.scrollHeight - prompterContent.clientHeight);
   }
   function applyOffset() {
-    prompterText.style.transform = `translate3d(0, ${-scrollOffset}px, 0)`;
+    const dpr = window.devicePixelRatio || 1;
+    const pixelAlignedOffset = Math.round(scrollOffset * dpr) / dpr;
+    prompterText.style.transform = `translate3d(0, ${-pixelAlignedOffset}px, 0)`;
   }
   function startScroll() {
     if (prompterScrollId) cancelAnimationFrame(prompterScrollId);
