@@ -672,10 +672,7 @@
   function closeTeleprompter() {
     teleprompterView.classList.remove('active');
     document.body.style.overflow = '';
-    if (prompterScrollId) {
-      cancelAnimationFrame(prompterScrollId);
-      prompterScrollId = null;
-    }
+    stopScroll();
     scrollOffset = 0;
     applyOffset();
   }
@@ -691,28 +688,48 @@
   function refreshMaxScroll() {
     maxScroll = Math.max(0, prompterContent.scrollHeight - prompterContent.clientHeight);
   }
+  let lastAppliedOffset = null;
   function applyOffset() {
+    if (scrollOffset === lastAppliedOffset) return;
+    lastAppliedOffset = scrollOffset;
     prompterText.style.transform = `translate3d(0, ${-scrollOffset}px, 0)`;
   }
   function startScroll() {
-    if (prompterScrollId) cancelAnimationFrame(prompterScrollId);
+    if (prompterScrollId) return;
     let lastTime = null;
     function tick(now) {
-      if (!paused && lastTime !== null) {
+      if (lastTime !== null) {
         const dt = Math.min((now - lastTime) / 1000, 0.1);
         scrollOffset = Math.min(scrollOffset + getSpeedPxPerSecond() * dt, maxScroll);
         applyOffset();
       }
       lastTime = now;
+      if (scrollOffset >= maxScroll) {
+        prompterScrollId = null;
+        return;
+      }
       prompterScrollId = requestAnimationFrame(tick);
     }
     prompterScrollId = requestAnimationFrame(tick);
+  }
+  function stopScroll() {
+    if (prompterScrollId) {
+      cancelAnimationFrame(prompterScrollId);
+      prompterScrollId = null;
+    }
+  }
+  function togglePause() {
+    paused = !paused;
+    pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+    if (paused) stopScroll();
+    else startScroll();
   }
 
   prompterContent.addEventListener('wheel', e => {
     e.preventDefault();
     scrollOffset = Math.min(Math.max(0, scrollOffset + e.deltaY), maxScroll);
     applyOffset();
+    if (!paused) startScroll();
   }, { passive: false });
 
   window.addEventListener('resize', () => {
@@ -720,6 +737,7 @@
     refreshMaxScroll();
     scrollOffset = Math.min(scrollOffset, maxScroll);
     applyOffset();
+    if (!paused) startScroll();
   });
 
   // ── Spacebar toggle ──
@@ -729,8 +747,7 @@
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     if (e.code === 'Space') {
       e.preventDefault();
-      paused = !paused;
-      pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+      togglePause();
     }
     if (e.code === 'Escape') {
       closeTeleprompter();
@@ -741,10 +758,7 @@
   newScriptBtn.addEventListener('click', createScript);
   teleprompterBtn.addEventListener('click', openTeleprompter);
   exitBtn.addEventListener('click', closeTeleprompter);
-  pauseBtn.addEventListener('click', () => {
-    paused = !paused;
-    pauseBtn.textContent = paused ? 'Resume' : 'Pause';
-  });
+  pauseBtn.addEventListener('click', togglePause);
   speedSlider.addEventListener('input', () => {
     speed = parseInt(speedSlider.value);
     speedLabel.textContent = speed;
