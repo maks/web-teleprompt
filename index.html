@@ -258,6 +258,18 @@
     min-width: 42px;
   }
 
+  #wakeLockLabel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  #wakeLockLabel input {
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+
   #prompterControls button {
     padding: 6px 16px;
     border: none;
@@ -409,6 +421,10 @@
       display: none;
     }
 
+    #prompterControls #wakeLockLabel {
+      display: flex;
+    }
+
     #prompterControls input[type=range] {
       width: 100px;
       flex: 1;
@@ -455,6 +471,7 @@
     <label for="speedSlider">Speed:</label>
     <input type="range" id="speedSlider" min="1" max="100" value="10">
     <span id="speedLabel">25</span>
+    <label id="wakeLockLabel"><input type="checkbox" id="wakeLockToggle"> Keep screen awake</label>
     <button id="pauseBtn">Pause</button>
     <button id="exitBtn">✕ Exit</button>
   </div>
@@ -537,6 +554,8 @@
   const prompterText = document.getElementById('prompterText');
   const speedSlider = document.getElementById('speedSlider');
   const speedLabel = document.getElementById('speedLabel');
+  const wakeLockLabel = document.getElementById('wakeLockLabel');
+  const wakeLockToggle = document.getElementById('wakeLockToggle');
   const pauseBtn = document.getElementById('pauseBtn');
   const exitBtn = document.getElementById('exitBtn');
 
@@ -696,6 +715,7 @@
   }
   function startScroll() {
     if (prompterScrollId) return;
+    acquireWakeLock();
     let lastTime = null;
     function tick(now) {
       if (lastTime !== null) {
@@ -706,6 +726,7 @@
       lastTime = now;
       if (scrollOffset >= maxScroll) {
         prompterScrollId = null;
+        releaseWakeLock();
         return;
       }
       prompterScrollId = requestAnimationFrame(tick);
@@ -717,6 +738,52 @@
       cancelAnimationFrame(prompterScrollId);
       prompterScrollId = null;
     }
+    releaseWakeLock();
+  }
+
+  // ── Screen wake lock (opt-in, held only while auto-scrolling) ──
+  const WAKELOCK_KEY = 'teleprompter_wakelock';
+  let wakeLock = null;
+
+  async function acquireWakeLock() {
+    if (!('wakeLock' in navigator) || wakeLock || !wakeLockToggle.checked) return;
+    try {
+      const lock = await navigator.wakeLock.request('screen');
+      // scrolling may have stopped, or the toggle flipped, while the request was in flight
+      if (!prompterScrollId || !wakeLockToggle.checked) {
+        lock.release();
+        return;
+      }
+      wakeLock = lock;
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (e) {
+      // request denied (e.g. battery saver, permissions policy) — screen sleeps as normal
+    }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLock) {
+      wakeLock.release();
+      wakeLock = null;
+    }
+  }
+
+  if ('wakeLock' in navigator) {
+    wakeLockToggle.checked = localStorage.getItem(WAKELOCK_KEY) === '1';
+    wakeLockToggle.addEventListener('change', () => {
+      if (wakeLockToggle.checked && prompterScrollId) acquireWakeLock();
+      else releaseWakeLock();
+      try {
+        localStorage.setItem(WAKELOCK_KEY, wakeLockToggle.checked ? '1' : '0');
+      } catch (e) {}
+    });
+    // the browser force-releases the lock when the tab is hidden;
+    // re-acquire if we come back while still scrolling
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && prompterScrollId) acquireWakeLock();
+    });
+  } else {
+    wakeLockLabel.style.display = 'none';
   }
   function togglePause() {
     paused = !paused;
