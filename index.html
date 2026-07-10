@@ -665,6 +665,7 @@
     pauseBtn.textContent = 'Pause';
     teleprompterView.classList.add('active');
     document.body.style.overflow = 'hidden';
+    refreshMaxScroll();
     startScroll();
   }
 
@@ -686,8 +687,9 @@
   }
 
   let scrollOffset = 0;
-  function maxOffset() {
-    return Math.max(0, prompterContent.scrollHeight - prompterContent.clientHeight);
+  let maxScroll = 0;
+  function refreshMaxScroll() {
+    maxScroll = Math.max(0, prompterContent.scrollHeight - prompterContent.clientHeight);
   }
   function applyOffset() {
     prompterText.style.transform = `translate3d(0, ${-scrollOffset}px, 0)`;
@@ -698,7 +700,7 @@
     function tick(now) {
       if (!paused && lastTime !== null) {
         const dt = Math.min((now - lastTime) / 1000, 0.1);
-        scrollOffset = Math.min(scrollOffset + getSpeedPxPerSecond() * dt, maxOffset());
+        scrollOffset = Math.min(scrollOffset + getSpeedPxPerSecond() * dt, maxScroll);
         applyOffset();
       }
       lastTime = now;
@@ -709,9 +711,16 @@
 
   prompterContent.addEventListener('wheel', e => {
     e.preventDefault();
-    scrollOffset = Math.min(Math.max(0, scrollOffset + e.deltaY), maxOffset());
+    scrollOffset = Math.min(Math.max(0, scrollOffset + e.deltaY), maxScroll);
     applyOffset();
   }, { passive: false });
+
+  window.addEventListener('resize', () => {
+    if (!teleprompterView.classList.contains('active')) return;
+    refreshMaxScroll();
+    scrollOffset = Math.min(scrollOffset, maxScroll);
+    applyOffset();
+  });
 
   // ── Spacebar toggle ──
   document.addEventListener('keydown', e => {
