@@ -209,138 +209,6 @@
     color: var(--text2);
   }
 
-  /* ── Teleprompter View ── */
-  #teleprompterView {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: #000;
-    z-index: 1000;
-    overflow: hidden;
-  }
-
-  #teleprompterView.active {
-    display: flex;
-    flex-direction: column;
-  }
-
-  #prompterControls {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-    padding: 10px 20px;
-    background: rgba(0, 0, 0, .85);
-    z-index: 10;
-    opacity: 0;
-    transition: opacity .3s;
-  }
-
-  #teleprompterView:hover #prompterControls,
-  #prompterControls:focus-within {
-    opacity: 1;
-  }
-
-  #prompterControls label {
-    font-size: 13px;
-    color: #ccc;
-    white-space: nowrap;
-  }
-
-  #prompterControls input[type=range] {
-    width: 160px;
-    cursor: pointer;
-  }
-
-  #speedLabel {
-    font-size: 13px;
-    color: var(--accent);
-    min-width: 42px;
-  }
-
-  #wakeLockLabel {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-  }
-
-  #wakeLockLabel input {
-    cursor: pointer;
-    accent-color: var(--accent);
-  }
-
-  #prompterControls button {
-    padding: 6px 16px;
-    border: none;
-    border-radius: var(--radius);
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  #pauseBtn {
-    background: var(--accent);
-    color: #fff;
-  }
-
-  #exitBtn {
-    background: var(--surface2);
-    color: #ccc;
-  }
-
-  #prompterContent {
-    flex: 1;
-    overflow: hidden;
-    padding: clamp(90px, 12vh, 120px) clamp(20px, 8vw, 80px) 55vh;
-  }
-
-  #prompterText {
-    will-change: transform;
-    font-size: clamp(30px, 5.5vw, 52px);
-    line-height: 1.6;
-    color: #fff;
-    max-width: 900px;
-    margin: 0 auto;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-
-  #prompterText h1 {
-    font-size: 2em;
-    margin: .6em 0 .3em;
-    color: #fff;
-  }
-
-  #prompterText h2 {
-    font-size: 1.5em;
-    margin: .5em 0 .25em;
-    color: #ddd;
-  }
-
-  #prompterText ul {
-    margin: .4em 0;
-    padding-left: 2em;
-  }
-
-  #prompterText li {
-    margin-bottom: .3em;
-  }
-
-  #prompterText b,
-  #prompterText strong {
-    color: #ffd;
-  }
-
-  #prompterText i,
-  #prompterText em {
-    font-style: italic;
-    color: #cde;
-  }
-
   /* empty state */
   #emptyState {
     display: none;
@@ -415,33 +283,11 @@
       padding: 12px 16px;
       font-size: 16px;
     }
-
-    #prompterControls {
-      gap: 8px;
-      padding: 8px 10px;
-    }
-
-    #prompterControls label {
-      display: none;
-    }
-
-    #prompterControls #wakeLockLabel {
-      display: flex;
-    }
-
-    #prompterControls input[type=range] {
-      width: 100px;
-      flex: 1;
-    }
   }
 
   @media (hover: none) {
     #scriptList li .deleteBtn {
       visibility: visible;
-    }
-
-    #prompterControls {
-      opacity: 1;
     }
   }
 </style>
@@ -470,19 +316,7 @@
 </div>
 
 <!-- ── Teleprompter View ── -->
-<div id="teleprompterView">
-  <div id="prompterControls">
-    <label for="speedSlider">Speed:</label>
-    <input type="range" id="speedSlider" min="1" max="100" value="10">
-    <span id="speedLabel">25</span>
-    <label id="wakeLockLabel"><input type="checkbox" id="wakeLockToggle"> Keep screen awake</label>
-    <button id="pauseBtn">Pause</button>
-    <button id="exitBtn">✕ Exit</button>
-  </div>
-  <div id="prompterContent">
-    <div id="prompterText"></div>
-  </div>
-</div>
+<teleprompter-view></teleprompter-view>
 
 <script type="module" src="js/app.js"></script>
 <script>
