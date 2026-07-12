@@ -1,31 +1,11 @@
+import { loadScripts, saveScripts, nextId } from './store.js';
+
 (() => {
-  const STORAGE_KEY = 'teleprompter_scripts';
   let scripts = [];
   let activeId = null;
   let prompterScrollId = null;
   let paused = false;
   let speed = 25;
-
-  // ── Storage ──
-  function load() {
-    try {
-      const data = localStorage.getItem(STORAGE_KEY);
-      scripts = data ? JSON.parse(data) : [];
-    } catch (e) {
-      console.warn('Failed to load from localStorage:', e);
-      scripts = [];
-    }
-  }
-  function save() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(scripts));
-    } catch (e) {
-      console.warn('Failed to save to localStorage:', e);
-    }
-  }
-  function nextId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  }
 
   // ── Markdown Parser ──
   function md(text) {
@@ -139,7 +119,7 @@
     s.title = titleInput.value.trim() || 'Untitled';
     s.content = editor.value;
     s.updatedAt = Date.now();
-    save();
+    saveScripts(scripts);
     renderList();
   }
 
@@ -152,7 +132,7 @@
       updatedAt: Date.now()
     };
     scripts.push(s);
-    save();
+    saveScripts(scripts);
     selectScript(s.id);
   }
 
@@ -163,7 +143,7 @@
     if (!confirm(`Delete "${title}"?\n\nThis cannot be undone.`)) return;
     const idx = scripts.findIndex(x => x.id === id);
     scripts = scripts.filter(x => x.id !== id);
-    save();
+    saveScripts(scripts);
     if (activeId === id) {
       if (scripts.length) {
         // Keep activeId pointing at the deleted script so selectScript's
@@ -353,14 +333,14 @@
   // ── Save on page unload (reload, close, navigate away) ──
   window.addEventListener('beforeunload', () => {
     saveCurrent();
-    save();
+    saveScripts(scripts);
   });
 
   // ── Init ──
   try {
     // Make sure editor view is visible
     editorView.style.display = 'flex';
-    load();
+    scripts = loadScripts();
 
     // Auto-create initial script if none exist
     if (scripts.length === 0) {

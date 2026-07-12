@@ -1,4 +1,4 @@
-const CACHE = 'teleprompter-v2';
+const CACHE = 'teleprompter-v3';
 
 // Everything the app needs to run offline.
 const ASSETS = [
@@ -6,6 +6,7 @@ const ASSETS = [
   './index.html',
   './manifest.webmanifest',
   './js/app.js',
+  './js/store.js',
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
