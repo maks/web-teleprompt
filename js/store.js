@@ -1,6 +1,17 @@
+// @ts-check
 // ── Script storage (localStorage) ──
 const STORAGE_KEY = 'teleprompter_scripts';
 
+/**
+ * @typedef {Object} Script
+ * @property {string} id        unique id from nextId()
+ * @property {string} title     display title ('Untitled' if blank)
+ * @property {string} content   raw markdown source
+ * @property {number} createdAt epoch ms
+ * @property {number} updatedAt epoch ms
+ */
+
+/** @returns {Script[]} */
 export function loadScripts() {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -11,6 +22,7 @@ export function loadScripts() {
   }
 }
 
+/** @param {Script[]} scripts */
 export function saveScripts(scripts) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(scripts));
