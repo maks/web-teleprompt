@@ -1,28 +1,40 @@
+// @ts-check
 import { loadScripts, saveScripts, nextId } from './store.js';
 import { md } from './markdown.js';
-import './components/teleprompter-view.js';
+import { TeleprompterView } from './components/teleprompter-view.js';
+/** @import { Script } from './store.js' */
 
 (() => {
+  /** @type {Script[]} */
   let scripts = [];
+  /** @type {?string} */
   let activeId = null;
 
   // ── DOM refs ──
-  const editorView = document.getElementById('editorView');
-  const mainEditor = document.getElementById('mainEditor');
-  const sidebar = document.getElementById('sidebar');
-  const scriptList = document.getElementById('scriptList');
-  const newScriptBtn = document.getElementById('newScriptBtn');
-  const titleInput = document.getElementById('titleInput');
-  const editor = document.getElementById('editor');
-  const teleprompterBtn = document.getElementById('teleprompterBtn');
-  const emptyState = document.getElementById('emptyState');
-  const prompter = document.querySelector('teleprompter-view');
-
-  // Safety check for DOM elements
-  if (!editorView || !mainEditor || !sidebar || !scriptList) {
-    console.error('Missing required DOM elements');
-    return;
+  /**
+   * Look up an element by id, verifying it exists and has the expected type.
+   * @template {HTMLElement} T
+   * @param {string} id
+   * @param {new () => T} type
+   * @returns {T}
+   */
+  function $(id, type) {
+    const element = document.getElementById(id);
+    if (!(element instanceof type)) {
+      throw new Error(`Missing or unexpected element #${id}`);
+    }
+    return element;
   }
+
+  const editorView = $('editorView', HTMLElement);
+  const sidebar = $('sidebar', HTMLElement);
+  const scriptList = $('scriptList', HTMLUListElement);
+  const newScriptBtn = $('newScriptBtn', HTMLButtonElement);
+  const titleInput = $('titleInput', HTMLInputElement);
+  const editor = $('editor', HTMLTextAreaElement);
+  const teleprompterBtn = $('teleprompterBtn', HTMLButtonElement);
+  const emptyState = $('emptyState', HTMLElement);
+  const prompter = $('prompter', TeleprompterView);
 
   // ── Render script list ──
   function renderList() {
@@ -58,6 +70,7 @@ import './components/teleprompter-view.js';
   }
 
   // ── Select / edit ──
+  /** @param {string} id */
   function selectScript(id) {
     // Save the PREVIOUS script before switching (if we have one)
     if (activeId) {
@@ -98,6 +111,7 @@ import './components/teleprompter-view.js';
     selectScript(s.id);
   }
 
+  /** @param {string} id */
   function deleteScript(id) {
     const s = scripts.find(x => x.id === id);
     if (!s) return;
@@ -123,7 +137,8 @@ import './components/teleprompter-view.js';
   }
 
   // ── Autosave ──
-  let autosaveTimer = null;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let autosaveTimer;
   function onEditorChange() {
     clearTimeout(autosaveTimer);
     autosaveTimer = setTimeout(saveCurrent, 400);

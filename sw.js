@@ -1,4 +1,4 @@
-const CACHE = 'teleprompter-v6';
+const CACHE = 'teleprompter-v7';
 
 // Everything the app needs to run offline.
 const ASSETS = [

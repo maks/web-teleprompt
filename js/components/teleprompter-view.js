@@ -18,7 +18,7 @@ styles.replaceSync(cssText);
 const template = document.createElement('template');
 template.innerHTML = htmlText;
 
-class TeleprompterView extends HTMLElement {
+export class TeleprompterView extends HTMLElement {
   #scrollId = null;
   #paused = false;
   #scrollOffset = 0;

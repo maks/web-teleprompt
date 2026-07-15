@@ -1,4 +1,11 @@
+// @ts-check
 // ── Markdown Parser ──
+
+/**
+ * Convert a small markdown subset (headings, bold, italic, bullets) to HTML.
+ * @param {string} text raw markdown source
+ * @returns {string} HTML markup
+ */
 export function md(text) {
   let html = text
     .replace(/&/g, '&amp;')
